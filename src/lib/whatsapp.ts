@@ -101,6 +101,7 @@ export function formatAppointmentWhatsAppMessage(details: WhatsAppBookingDetails
  * Builds a valid WhatsApp click-to-chat deep link URL
  */
 export function buildWhatsAppUrl(phoneNumber: string, message: string): string {
-  const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-  return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+  const cleanNumber = (phoneNumber || '+265 888 38 29 38').replace(/[^0-9]/g, '');
+  const targetNumber = cleanNumber || '265888382938';
+  return `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`;
 }
