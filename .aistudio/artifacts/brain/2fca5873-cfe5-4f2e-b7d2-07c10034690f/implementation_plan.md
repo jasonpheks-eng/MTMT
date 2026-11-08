@@ -1,79 +1,69 @@
-# Direct Google Calendar Integration Plan
+# Gmail & Google Calendar Sync for jasonpheks@gmail.com
 
-Transition Google Calendar booking synchronization from client-side OAuth popups (which encounter origin mismatch errors on dynamic preview domains) to a reliable server-side proxy route and direct calendar link sync system.
+Configure direct Google Calendar event synchronization pre-targeted to the CEO's Gmail address (`jasonpheks@gmail.com`) so every client booking automatically includes calendar invite parameters for `jasonpheks@gmail.com`.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> **Confirmed Choice**: The user selected **Direct Google Calendar sync with backend API key or Service Account**. This bypasses client-side OAuth popups and eliminates the `Error 400: origin_mismatch` issue caused by dynamic preview origins.
+> **Confirmed Target Account**: Sync calendar events directly to `jasonpheks@gmail.com` as the primary CEO destination email address for all boutique appointments.
 
-- **Confirmed Decision 1**: Server-side proxy route (`/api/calendar/sync`) for automated background appointment creation.
-- **Confirmed Decision 2**: Direct "Add to Google Calendar" action link for clients as a instant zero-friction calendar fallback.
+- **Confirmed Choice**: Pre-configure `ceo_google_email` default to `jasonpheks@gmail.com`.
+- **Confirmed Feature**: Automatically append `jasonpheks@gmail.com` as an invited attendee on generated Google Calendar links and backend calendar sync payloads.
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **What It Does**: Enables seamless booking calendar creation when clients book appointments at MT Mansion. The system creates Google Calendar events via backend proxy API calls and provides "Add to Calendar" links for booking confirmations.
-- **Target Audience / Persona**: Boutique CEO / Admin managing appointment schedules and luxury clients booking beauty services.
-- **Key Value**: 100% reliable calendar event creation without popup blockers, browser origin mismatch errors, or manual authorization friction.
+- **What It Does**: Whenever a client books an appointment (or when an admin manages bookings), the app generates Google Calendar event invitations with `add=jasonpheks@gmail.com` pre-attached.
+- **Target Audience**: CEO (`jasonpheks@gmail.com`) and boutique clients.
+- **Key Value**: Guarantees appointments instantly appear on the CEO's Google Calendar and Gmail calendar schedule with zero configuration friction.
 
 ---
 
 ## 2. User Experience & Visual Design
 
 - **Admin Panel (TabCalendar)**:
-  - Simplified interface for CEO Google Calendar configuration.
-  - Allows specifying CEO target Google Email, Calendar ID, and optional API key / Service Account credentials.
-  - Active status indicator showing system sync readiness.
-  - Test sync trigger button to verify API connectivity.
-- **Client Booking Experience**:
-  - Instant booking confirmation modal after service booking.
-  - "Add to Google Calendar" link generated for the client's personal calendar.
-  - Automated background sync to CEO's boutique calendar.
+  - CEO Google Email pre-set to `jasonpheks@gmail.com`.
+  - Display "Sync Active for jasonpheks@gmail.com" status badge.
+  - Quick action to dispatch test appointment to `jasonpheks@gmail.com` Google Calendar.
+- **Client Booking Modal & Admin Appointments Tab**:
+  - Direct "Sync to Google Calendar" button on every appointment card that invites `jasonpheks@gmail.com` directly.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Decision 1**: Server-Side Calendar Sync Proxy
-  - *Chosen Approach*: Handle Google Calendar Event creation via backend endpoint `/api/calendar/sync` in `server.ts`.
-  - *Why*: Server-side requests are immune to browser `origin_mismatch` restrictions and popup blockers.
-- **Decision 2**: Dual Sync Strategy (Server Sync + Client Calendar Links)
-  - *Chosen Approach*: Send background creation request to server AND provide direct `https://calendar.google.com/calendar/render?action=TEMPLATE` link in booking confirmation.
-  - *Why*: Guarantees both the CEO and the client have calendar events even if custom API credentials are not yet configured.
+- **Decision 1**: Attendee-Targeted Web Links (`add=jasonpheks@gmail.com`)
+  - *Chosen Approach*: Embed `add=jasonpheks@gmail.com` into Google Calendar `TEMPLATE` render links (`https://calendar.google.com/calendar/render?action=TEMPLATE&add=jasonpheks@gmail.com&...`).
+  - *Why*: Automatically sends a Google Calendar invitation directly to `jasonpheks@gmail.com`'s Google Calendar when clicked.
 
 ---
 
 ## 4. Technical Architecture & Data Strategy
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Client (Browser)                     │
-│  - BoutiqueContext (Book Appointment)                   │
-│  - Booking Modal ("Add to Google Calendar" link)         │
-│  - AdminModal -> TabCalendar (CEO Settings)             │
-└────────────────────────────┬────────────────────────────┘
-                             │ POST /api/calendar/sync
-                             ▼
-┌─────────────────────────────────────────────────────────┐
-│                   Server (server.ts)                    │
-│  - Express proxy route /api/calendar/sync              │
-│  - Google Calendar REST API event creation payload      │
-│  - Secure API Key / Service Account token handler       │
-└────────────────────────────┬────────────────────────────┘
-                             │ HTTPS API Call
-                             ▼
-┌─────────────────────────────────────────────────────────┐
-│                   Google Calendar API                   │
-│  - https://www.googleapis.com/calendar/v3/calendars    │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                       Client Booking                        │
+│  - Form submission -> Appends add=jasonpheks@gmail.com      │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Google Calendar Event Link                  │
+│  - https://calendar.google.com/calendar/render             │
+│    ?action=TEMPLATE                                         │
+│    &text=MT+Mansion:+Service                                │
+│    &add=jasonpheks@gmail.com                                │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 CEO Gmail / Google Calendar                 │
+│  - Event added directly to jasonpheks@gmail.com's Calendar  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 - **Data Model Updates**:
-  - `BoutiqueSettings`: Keep `calendar_sync_enabled`, `ceo_google_email`, `calendar_reminder_min`, and optional `calendar_api_key`.
-- **API Flow**:
-  1. Client submits booking request.
-  2. `BoutiqueContext` calls `/api/calendar/sync` with appointment details.
-  3. Server proxy builds Google Calendar event payload and dispatches event creation.
-  4. Client receives appointment confirmation with direct Google Calendar web event URL.
+  - Set default `defaultSettings.ceo_google_email` in `server.ts` and `initialData.ts` to `jasonpheks@gmail.com`.
+- **Helper Function Updates**:
+  - Update `buildGoogleCalendarWebLink` in `src/lib/googleCalendar.ts` to include `add=${encodeURIComponent(targetEmail)}`.

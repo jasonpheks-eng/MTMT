@@ -44,7 +44,7 @@ export const defaultSettings: BoutiqueSettings = {
   experiences_subtitle_color: '#F49AC2',
   footer_bg_color: '#1A0A13',
   footer_text_color: '#FBF8F6',
-  ceo_google_email: 'ceo@mtmansion.com',
+  ceo_google_email: 'jasonpheks@gmail.com',
   calendar_sync_enabled: true,
   calendar_reminder_min: 30,
   hero_gradient_enabled: false,

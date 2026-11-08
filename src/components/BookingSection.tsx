@@ -3,6 +3,7 @@ import { useBoutique } from '../context/BoutiqueContext';
 import { ServiceItem } from '../types';
 import { GooeyGradientBackground } from './GooeyGradientBackground';
 import { formatAppointmentWhatsAppMessage, buildWhatsAppUrl } from '../lib/whatsapp';
+import { buildGoogleCalendarWebLink } from '../lib/googleCalendar';
 import {
   Clock,
   CheckCircle,
@@ -210,7 +211,7 @@ export const BookingSection: React.FC = () => {
       setConfirmedBooking(appointment);
       setIsItineraryOpen(true);
 
-      // Organized luxury WhatsApp message format
+      // 1. Organized WhatsApp Message
       const waText = formatAppointmentWhatsAppMessage({
         boutiqueName: settings.boutique_name,
         clientName: appointment.client_name,
@@ -227,15 +228,27 @@ export const BookingSection: React.FC = () => {
       const waUrl = buildWhatsAppUrl(settings.whatsapp_number, waText);
       window.open(waUrl, '_blank', 'noopener,noreferrer');
 
-      // Scroll smoothly to My Bookings section after DOM updates
+      // 2. Auto-trigger Google Calendar sync window with 30-min reminder for CEO
+      const targetEmail = settings.ceo_google_email || 'jasonpheks@gmail.com';
+      const calUrl = buildGoogleCalendarWebLink(
+        appointment,
+        settings.calendar_reminder_min || 30,
+        targetEmail
+      );
       setTimeout(() => {
-        const itinerarySection = document.getElementById('my-bookings-section');
+        try {
+          window.open(calUrl, '_blank', 'noopener,noreferrer');
+        } catch (e) {}
+      }, 600);
+
+      // Scroll smoothly to confirmation card
+      setTimeout(() => {
+        const itinerarySection = document.getElementById('my-bookings-section') || document.getElementById('booking');
         if (itinerarySection) {
           itinerarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 100);
 
-      // Reset notes so customer can book another treatment if desired
       setNotes('');
     } catch (err: any) {
       setErrorMessage(err.message || 'Booking submission failed. Please try again.');
@@ -300,6 +313,19 @@ export const BookingSection: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <button
+                type="button"
+                onClick={() => {
+                  const calUrl = buildGoogleCalendarWebLink(confirmedBooking, settings.calendar_reminder_min || 30, settings.ceo_google_email || 'jasonpheks@gmail.com');
+                  window.open(calUrl, '_blank', 'noopener,noreferrer');
+                }}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center justify-center gap-2 shadow-lg transition-colors cursor-pointer"
+              >
+                <CalendarIcon className="w-4 h-4 text-blue-200" />
+                <span>Add to Google Calendar ↗</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   const confirmedService = services.find(s => s.id === confirmedBooking.service_id);
                   const waText = formatAppointmentWhatsAppMessage({
@@ -317,18 +343,19 @@ export const BookingSection: React.FC = () => {
                   const waUrl = buildWhatsAppUrl(settings.whatsapp_number, waText);
                   window.open(waUrl, '_blank', 'noopener,noreferrer');
                 }}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg"
+                className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>Open WhatsApp ↗</span>
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setConfirmedBooking(null);
                   setClientName('');
                   setNotes('');
                 }}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-full border border-white/20 hover:bg-white/10 text-white text-xs transition-colors"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full border border-white/20 hover:bg-white/10 text-white text-xs transition-colors cursor-pointer"
               >
                 Book Another
               </button>

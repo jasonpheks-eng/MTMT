@@ -67,7 +67,7 @@ const defaultSettings: BoutiqueSettings = {
   experiences_bg_color: '#180711',
   footer_bg_color: '#1A0A13',
   footer_text_color: '#FBF8F6',
-  ceo_google_email: 'ceo@mtmansion.com',
+  ceo_google_email: 'jasonpheks@gmail.com',
   calendar_sync_enabled: true,
   calendar_reminder_min: 30,
   hero_gradient_enabled: false,
@@ -663,9 +663,9 @@ apiRouter.post('/calendar/sync', async (req: Request, res: Response) => {
 
   const title = `MT Mansion: ${appointment.service_title} - ${appointment.client_name}`;
   const details = `Boutique Appointment Booking\n\nClient: ${appointment.client_name}\nPhone: ${appointment.client_phone}\nTreatment: ${appointment.service_title}\nDate: ${appointment.date}\nTime: ${appointment.time_slot}\n${appointment.notes ? `Notes: ${appointment.notes}\n` : ''}Ref: ${appointment.id}`;
-  const location = `MT Mansion Luxury Boutique`;
-
-  const webLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(dates)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+  const eventLocation = 'MT Mansion Luxury Boutique';
+  const targetEmail = calendarId || store.settings.ceo_google_email || 'jasonpheks@gmail.com';
+  const webLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(dates)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(eventLocation)}&add=${encodeURIComponent(targetEmail)}`;
 
   if (apiKey) {
     try {
