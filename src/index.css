@@ -61,3 +61,15 @@ html {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
+/* Desktop View Specific Style Overrides */
+@media (min-width: 768px) {
+  .hero-desktop-title {
+    font-size: 53px !important;
+  }
+  .hero-desktop-desc {
+    font-size: 21px !important;
+    text-align: justify !important;
+    line-height: 20.25px !important;
+  }
+}

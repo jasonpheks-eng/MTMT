@@ -9,9 +9,9 @@ export const Navbar: React.FC = () => {
   const logoStyle = getImageStyleAndClasses('logo_url', imageSlots.configs, 'auto', 'object-contain');
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-0 md:h-3 group">
+    <div className="fixed top-0 left-0 right-0 z-50">
       <header 
-        className="absolute top-0 left-0 right-0 text-white shadow-lg border-b border-rose-300/20 backdrop-blur-xl transition-all duration-500 ease-in-out transform translate-y-0 md:-translate-y-full md:group-hover:translate-y-0 md:delay-[1500ms] md:group-hover:delay-0"
+        className="w-full text-white shadow-lg border-b border-rose-300/20 backdrop-blur-xl transition-all duration-300"
         style={{ backgroundColor: (settings.navbar_bg_color || '#000000') + 'ee' }}
       >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">

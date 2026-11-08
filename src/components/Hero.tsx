@@ -98,7 +98,7 @@ export const Hero: React.FC = () => {
           }}
         >
           <span 
-            className="inline-block"
+            className="inline-block hero-desktop-title"
             style={{ fontSize: '50px' }}
           >
             {settings.boutique_name || 'mt maison'}
@@ -186,12 +186,10 @@ export const Hero: React.FC = () => {
           
           <div className="reveal active delay-200 grid md:grid-cols-2 gap-10 md:gap-20 items-start">
             <p 
-              className="text-base sm:text-lg md:text-xl font-light transition-colors duration-200"
+              className="text-base sm:text-lg font-light transition-colors duration-200 hero-desktop-desc"
               style={{ 
                 color: settings.hero_text_color || '#a1a1aa',
                 textShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                lineHeight: `${settings.hero_description_line_height || 22.25}px`,
-                textAlign: (settings.hero_description_align || 'left') as any
               }}
             >
               {settings.hero_description || 'Welcome to MT Maison, your beauty destination for flawless nails, beautiful wig installations and stunning lashes.'}
