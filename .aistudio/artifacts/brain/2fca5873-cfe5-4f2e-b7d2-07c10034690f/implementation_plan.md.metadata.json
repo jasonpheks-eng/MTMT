@@ -1,0 +1,6 @@
+{
+  "summary":  "Implementation plan for Direct Google Calendar synchronization via backend proxy route / service account credentials to eliminate origin_mismatch errors.",
+  "updatedAt":  "2026-11-08T17:44:45.177550997Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

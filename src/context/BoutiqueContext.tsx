@@ -613,11 +613,7 @@ export const BoutiqueProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     if (settings.calendar_sync_enabled !== false) {
       try {
-        await syncAppointmentToGoogleCalendar(
-          createdApt,
-          getCachedCalendarToken(),
-          settings.calendar_reminder_min || 30
-        );
+        await syncAppointmentToGoogleCalendar(createdApt);
       } catch (calErr) {
         console.warn('Google Calendar sync warning:', calErr);
       }

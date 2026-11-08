@@ -635,6 +635,75 @@ apiRouter.post('/test-supabase', async (req: Request, res: Response) => {
   }
 });
 
+// Google Calendar sync endpoint
+apiRouter.post('/calendar/sync', async (req: Request, res: Response) => {
+  const { appointment, apiKey, calendarId } = req.body;
+  if (!appointment || !appointment.client_name) {
+    return res.status(400).json({ success: false, message: 'Invalid appointment payload' });
+  }
+
+  const [year, month, day] = (appointment.date || '2026-11-12').split('-').map(Number);
+  let hours = 14;
+  let minutes = 30;
+  try {
+    const match = (appointment.time_slot || '').match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      hours = parseInt(match[1], 10);
+      minutes = parseInt(match[2], 10);
+      const ampm = match[3].toUpperCase();
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+    }
+  } catch (e) {}
+
+  const startDate = new Date(year, (month || 1) - 1, day || 1, hours, minutes, 0);
+  const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+  const formatISO = (d: Date) => d.toISOString().replace(/-|:|\.\d+/g, '');
+  const dates = `${formatISO(startDate)}/${formatISO(endDate)}`;
+
+  const title = `MT Mansion: ${appointment.service_title} - ${appointment.client_name}`;
+  const details = `Boutique Appointment Booking\n\nClient: ${appointment.client_name}\nPhone: ${appointment.client_phone}\nTreatment: ${appointment.service_title}\nDate: ${appointment.date}\nTime: ${appointment.time_slot}\n${appointment.notes ? `Notes: ${appointment.notes}\n` : ''}Ref: ${appointment.id}`;
+  const location = `MT Mansion Luxury Boutique`;
+
+  const webLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(dates)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+
+  if (apiKey) {
+    try {
+      const targetCal = calendarId || store.settings.ceo_google_email || 'primary';
+      const eventPayload = {
+        summary: title,
+        description: details,
+        location,
+        start: { dateTime: startDate.toISOString() },
+        end: { dateTime: endDate.toISOString() },
+        reminders: {
+          useDefault: false,
+          overrides: [
+            { method: 'popup', minutes: store.settings.calendar_reminder_min || 30 },
+            { method: 'email', minutes: store.settings.calendar_reminder_min || 30 }
+          ]
+        }
+      };
+
+      const googleRes = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCal)}/events?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventPayload),
+        }
+      );
+      if (googleRes.ok) {
+        return res.json({ success: true, synced: true, webLink, message: 'Synced to Google Calendar via API key' });
+      }
+    } catch (gErr) {
+      console.warn('Google Calendar API sync error:', gErr);
+    }
+  }
+
+  return res.json({ success: true, synced: false, webLink, message: 'Google Calendar web link generated' });
+});
+
 // SSE endpoint for fallback real-time streaming
 apiRouter.get('/realtime-sse', (req: Request, res: Response) => {
   res.writeHead(200, {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useBoutique } from '../context/BoutiqueContext';
 import { ServiceItem } from '../types';
-import { X, ArrowRight, ArrowDown, Sparkles } from 'lucide-react';
+import { X, ArrowRight, ArrowDown, Sparkles, Calendar } from 'lucide-react';
 import { formatAppointmentWhatsAppMessage, buildWhatsAppUrl } from '../lib/whatsapp';
+import { buildGoogleCalendarWebLink } from '../lib/googleCalendar';
 
 export const BookingModal: React.FC = () => {
   const {
@@ -196,28 +197,41 @@ export const BookingModal: React.FC = () => {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          const aptService = services.find(s => s.id === apt.service_id);
-                          const waText = formatAppointmentWhatsAppMessage({
-                            boutiqueName: settings.boutique_name,
-                            clientName: apt.client_name,
-                            serviceTitle: apt.service_title,
-                            category: apt.category,
-                            price: aptService?.price,
-                            currencySymbol: settings.currency_symbol,
-                            date: apt.date,
-                            timeSlot: apt.time_slot,
-                            bookingRef: apt.id,
-                            notes: apt.notes,
-                          });
-                          const waUrl = buildWhatsAppUrl(settings.whatsapp_number, waText);
-                          window.open(waUrl, '_blank', 'noopener,noreferrer');
-                        }}
-                        className="w-full py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 text-[10px] font-medium transition-all border border-emerald-500/20 mt-1"
-                      >
-                        Message Staff on WhatsApp
-                      </button>
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          onClick={() => {
+                            const calUrl = buildGoogleCalendarWebLink(apt, settings.calendar_reminder_min || 30);
+                            window.open(calUrl, '_blank', 'noopener,noreferrer');
+                          }}
+                          className="flex-1 py-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 text-[10px] font-medium transition-all border border-blue-500/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                          <span>Add to Calendar</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            const aptService = services.find(s => s.id === apt.service_id);
+                            const waText = formatAppointmentWhatsAppMessage({
+                              boutiqueName: settings.boutique_name,
+                              clientName: apt.client_name,
+                              serviceTitle: apt.service_title,
+                              category: apt.category,
+                              price: aptService?.price,
+                              currencySymbol: settings.currency_symbol,
+                              date: apt.date,
+                              timeSlot: apt.time_slot,
+                              bookingRef: apt.id,
+                              notes: apt.notes,
+                            });
+                            const waUrl = buildWhatsAppUrl(settings.whatsapp_number, waText);
+                            window.open(waUrl, '_blank', 'noopener,noreferrer');
+                          }}
+                          className="flex-1 py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 text-[10px] font-medium transition-all border border-emerald-500/20 text-center cursor-pointer"
+                        >
+                          WhatsApp Staff
+                        </button>
+                      </div>
                     </div>
                   ))}
                   <p className="text-center text-[10px] text-rose-200/40 mt-4">
