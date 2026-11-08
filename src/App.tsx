@@ -7,9 +7,11 @@ import { BookingSection } from './components/BookingSection';
 import { ExperiencesSection } from './components/ExperiencesSection';
 import { Footer } from './components/Footer';
 import { BookingModal } from './components/BookingModal';
-import { AdminModal } from './components/AdminModal';
 import { SearchModal } from './components/SearchModal';
 import { FavoritesModal } from './components/FavoritesModal';
+
+// Code-split and lazy-load AdminModal so admin portal code & heavy drag-and-drop libraries do not bloat initial mobile page load
+const AdminModal = React.lazy(() => import('./components/AdminModal').then((m) => ({ default: m.AdminModal })));
 
 const AppContent: React.FC = () => {
   const { settings } = useBoutique();
@@ -39,11 +41,15 @@ const AppContent: React.FC = () => {
       {/* Footer & CTA */}
       <Footer />
 
-      {/* Modals & Itinerary Widget */}
+      {/* Modals & Widgets */}
       <BookingModal />
-      <AdminModal />
       <SearchModal />
       <FavoritesModal />
+
+      {/* Lazy Loaded Admin Portal */}
+      <React.Suspense fallback={null}>
+        <AdminModal />
+      </React.Suspense>
     </div>
   );
 };
