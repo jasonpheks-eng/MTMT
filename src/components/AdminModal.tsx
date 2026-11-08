@@ -29,6 +29,8 @@ import {
   Save,
   Sparkles,
   Type,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -68,6 +70,7 @@ export const AdminModal: React.FC = () => {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Active Admin Tab
   const [activeTab, setActiveTab] = useState<
@@ -153,7 +156,7 @@ export const AdminModal: React.FC = () => {
     const valid = await verifyPin(pinInput);
     setIsVerifying(false);
     if (!valid) {
-      setPinError('Incorrect PIN. (Hint: MT1234)');
+      setPinError('Incorrect password. Please try again.');
     } else {
       setPinInput('');
     }
@@ -688,20 +691,31 @@ export const AdminModal: React.FC = () => {
             )}
 
             <form onSubmit={handlePinSubmit} className="space-y-4">
-              <input
-                type="password"
-                required
-                autoFocus
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value)}
-                placeholder="Enter PIN (MT1234)"
-                className="w-full text-center tracking-[0.4em] font-mono text-xl bg-white/5 border border-white/20 rounded-2xl py-3 px-4 text-white focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-rose-400"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoFocus
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  placeholder="Enter Password"
+                  className="w-full text-center tracking-[0.3em] font-mono text-xl bg-white/5 border border-white/20 rounded-2xl py-3 px-12 text-white focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-rose-400 placeholder:text-neutral-500 placeholder:tracking-normal placeholder:text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-1 transition-colors cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
 
               <button
                 type="submit"
                 disabled={isVerifying}
-                className="w-full py-3.5 rounded-full bg-[#C45266] hover:bg-[#b04356] text-white font-medium text-sm transition-all shadow-lg flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-full bg-[#C45266] hover:bg-[#b04356] text-white font-medium text-sm transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Lock className="w-4 h-4" />
                 <span>{isVerifying ? 'Checking...' : 'Unlock Management Panel'}</span>
