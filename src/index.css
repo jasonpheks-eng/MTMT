@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-serif: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --color-boutique-pink: #FF5B9E;
+  --color-boutique-black: #000000;
+  --color-boutique-white: #FFFFFF;
+}
+
+.stark-grid {
+  background-image: linear-gradient(rgba(255,91,158,0.1) 1px,transparent 1px),
+                    linear-gradient(90deg,rgba(255,91,158,0.1) 1px,transparent 1px);
+  background-size: 100px 100px;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s ease-out;
+}
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: var(--font-sans);
+}
+
+.font-editorial {
+  font-family: var(--font-serif);
+}
+
+/* Custom delicate luxury scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1A0A13;
+}
+::-webkit-scrollbar-thumb {
+  background: #C76A75;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E5B8C0;
+}
+
+.animate-gradient-move {
+  background-size: 200% 200%;
+  animation: gradientMove 10s ease infinite;
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

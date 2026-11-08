@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix MT",
+  "description": "Bespoke nails, lashes, and hair styling boutique with real-time calendar booking and WhatsApp consultations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
