@@ -210,3 +210,14 @@ export const signOutFromCalendar = () => {
   cachedAccessToken = null;
   cachedUserEmail = null;
 };
+
+export const buildEmailCalendarInvite = (
+  appointment: Appointment,
+  targetEmail: string = 'jasonpheks@gmail.com'
+): { mailtoUrl: string; subject: string; body: string } => {
+  const subject = `[Booking #${appointment.id}] ${appointment.service_title} - ${appointment.client_name} (${appointment.date} @ ${appointment.time_slot})`;
+  const body = `New Booking Request at MT Mansion:\n\n- Client Name: ${appointment.client_name}\n- Treatment/Service: ${appointment.service_title}\n- Date: ${appointment.date}\n- Time Slot: ${appointment.time_slot}\n- Booking Ref: #${appointment.id}\n- Notes: ${appointment.notes || 'None'}\n\nThis appointment has been requested via the MT Mansion boutique booking system.`;
+  const mailtoUrl = `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return { mailtoUrl, subject, body };
+};
+
