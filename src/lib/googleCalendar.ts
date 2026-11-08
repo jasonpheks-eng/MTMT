@@ -1,22 +1,31 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Appointment } from '../types';
 
 let app: any;
 let auth: any;
-let provider: GoogleAuthProvider;
 
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  provider = new GoogleAuthProvider();
-  provider.addScope('https://www.googleapis.com/auth/calendar.events');
 } catch (err) {
-  console.warn('Firebase / Google Auth initialization warning:', err);
+  console.warn('Firebase initialization warning:', err);
 }
 
 let cachedAccessToken: string | null = null;
+
+// Parse access token from URL hash if user redirected
+if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+  try {
+    const params = new URLSearchParams(window.location.hash.substring(1));
+    const token = params.get('access_token');
+    if (token) {
+      cachedAccessToken = token;
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  } catch (e) {}
+}
 
 declare global {
   interface Window {
@@ -24,34 +33,61 @@ declare global {
   }
 }
 
-const loadGisScript = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (window.google?.accounts?.oauth2) {
-      resolve();
-      return;
-    }
-    const existingScript = document.getElementById('google-gis-script');
-    if (existingScript) {
-      existingScript.addEventListener('load', () => resolve());
-      existingScript.addEventListener('error', (e) => reject(e));
-      return;
-    }
-    const script = document.createElement('script');
-    script.id = 'google-gis-script';
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = (err) => reject(err);
-    document.head.appendChild(script);
-  });
+const loadGisScript = () => {
+  if (typeof window === 'undefined') return;
+  if (window.google?.accounts?.oauth2) return;
+  if (document.getElementById('google-gis-script')) return;
+
+  const script = document.createElement('script');
+  script.id = 'google-gis-script';
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
 };
 
-export const authenticateCEOWithGIS = async (): Promise<{ user: { email?: string; displayName?: string }; accessToken: string }> => {
-  await loadGisScript();
+if (typeof window !== 'undefined') {
+  loadGisScript();
+}
+
+export const getCachedCalendarToken = (): string | null => {
+  return cachedAccessToken;
+};
+
+export const setCachedCalendarToken = (token: string) => {
+  cachedAccessToken = token;
+};
+
+export const getGoogleOAuthUrl = (): string => {
+  const clientId = firebaseConfig.oAuthClientId;
+  const redirectUri = typeof window !== 'undefined' ? window.location.origin : '';
+  const scopes = [
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+  ].join(' ');
+
+  return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scopes)}&prompt=consent`;
+};
+
+export const authenticateCEOForCalendar = async (): Promise<{ user: { email?: string; displayName?: string }; accessToken: string }> => {
   const clientId = firebaseConfig.oAuthClientId;
   if (!clientId) {
-    throw new Error('Google OAuth Client ID is missing from configuration');
+    throw new Error('Google OAuth Client ID is missing in configuration');
+  }
+
+  // Ensure GIS is available
+  if (!window.google?.accounts?.oauth2) {
+    loadGisScript();
+    let attempts = 0;
+    while (!window.google?.accounts?.oauth2 && attempts < 15) {
+      await new Promise((r) => setTimeout(r, 100));
+      attempts++;
+    }
+  }
+
+  if (!window.google?.accounts?.oauth2) {
+    throw new Error('Google Identity script failed to load. Please try direct sign-in.');
   }
 
   return new Promise((resolve, reject) => {
@@ -85,43 +121,19 @@ export const authenticateCEOWithGIS = async (): Promise<{ user: { email?: string
               accessToken: response.access_token,
             });
           } else {
-            reject(new Error('No access token received from Google authentication'));
+            reject(new Error('No access token received from Google'));
           }
         },
         error_callback: (err: any) => {
-          reject(new Error(err.message || 'Google Auth Popup closed or failed'));
+          reject(new Error(err?.message || 'Popup was closed or blocked by browser settings.'));
         }
       });
 
       client.requestAccessToken({ prompt: 'consent' });
-    } catch (err) {
+    } catch (err: any) {
       reject(err);
     }
   });
-};
-
-export const authenticateCEOForCalendar = async (): Promise<{ user: { email?: string; displayName?: string }; accessToken: string } | null> => {
-  if (auth && provider) {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        cachedAccessToken = credential.accessToken;
-        return {
-          user: { email: result.user.email || undefined, displayName: result.user.displayName || undefined },
-          accessToken: cachedAccessToken
-        };
-      }
-    } catch (err: any) {
-      console.warn('Firebase signInWithPopup failed or domain unauthorized, falling back to Google Identity Services (GIS)...', err?.code || err);
-    }
-  }
-
-  return await authenticateCEOWithGIS();
-};
-
-export const getCachedCalendarToken = (): string | null => {
-  return cachedAccessToken;
 };
 
 export const syncAppointmentToGoogleCalendar = async (
