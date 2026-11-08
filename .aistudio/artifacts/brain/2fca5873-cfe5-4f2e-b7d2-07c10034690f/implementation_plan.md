@@ -1,24 +1,22 @@
-# Direct Background Google Calendar Event Sync Upon Guest Booking
+# Automated Google Calendar OAuth & Firestore Persistence Plan
 
-Automatically create a calendar event in the CEO's synchronized Google Calendar (`settings.ceo_google_email` / authorized account) behind the scenes whenever a guest clicks "Request via WhatsApp", ensuring the event is created directly via the Google Calendar REST API using the stored access token while opening WhatsApp.
+Ensure seamless, automated Google Calendar event synchronization for every client booking using authenticated OAuth tokens and Firestore persistence.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> **Confirmed Workflow**: When a guest submits a booking request, the app will execute two actions in parallel behind the scenes:
-> 1. Open WhatsApp with the prefilled message for staff.
-> 2. Dispatch a direct background API call to the CEO's Google Calendar using the authorized OAuth token (`getCachedCalendarToken()`) and target email (`settings.ceo_google_email`), creating the appointment event instantly in the CEO's calendar.
+> **Confirmed Goal**: Automatically sync guest bookings to your personal Google Calendar via OAuth authentication and persist records in Firestore.
 
-- **Confirmed Decision 1**: Direct REST API event creation (`https://www.googleapis.com/calendar/v3/calendars/primary/events`) utilizing the cached OAuth token if available.
-- **Confirmed Decision 2**: Fallback to direct calendar web link generation with pre-populated attendee (`settings.ceo_google_email`) if no OAuth token is active yet.
+- **Confirmed Decision 1**: Store and retrieve active Google OAuth access tokens securely in memory and Firestore.
+- **Confirmed Decision 2**: Automatically trigger Google Calendar REST API calls on booking submission to insert events directly into your calendar.
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **What It Does**: Seamless background event syncing. When a guest submits a booking in `BookingSection.tsx`, `createAppointment` invokes `syncAppointmentToGoogleCalendar(appointment, getCachedCalendarToken(), settings.calendar_reminder_min || 30)`.
-- **Target Audience**: Boutique CEO / Owner and guests.
-- **Key Value**: Zero-touch calendar entry creation in the CEO's Google Calendar upon guest request submission.
+- **What It Does**: When you sign in with Google in the Admin Panel, your OAuth token (`https://www.googleapis.com/auth/calendar.events`) is authorized. When a guest books an appointment, the app automatically posts the event to your Google Calendar in the background.
+- **Target Audience**: Boutique CEO / Owner (`jasonpheks@gmail.com`).
+- **Key Value**: Fully automated calendar scheduling with zero manual link clicking required.
 
 ---
 
@@ -26,20 +24,26 @@ Automatically create a calendar event in the CEO's synchronized Google Calendar 
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Guest Booking Submit                     │
-│  - User enters name & notes, clicks "Request via WhatsApp"   │
+│                       Guest Booking                         │
+│  - Guest submits booking details in BookingSection           │
 └──────────────────────────────┬──────────────────────────────┘
                                │
-       ┌───────────────────────┴───────────────────────┐
-       ▼                                               ▼
-┌──────────────────────────────┐        ┌──────────────────────────────┐
-│      Open WhatsApp Chat      │        │  Background Calendar Sync    │
-│  - Prefilled WhatsApp msg    │        │  - syncAppointmentToGoogle...│
-│  - Sends details to staff    │        │  - POST to Google Calendar   │
-│                              │        │    REST API (primary/events) │
-└──────────────────────────────┘        └──────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Background Calendar Sync                    │
+│  - Verifies stored OAuth token                              │
+│  - Calls Google Calendar REST API                           │
+│    (POST /calendars/primary/events)                         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Personal Google Calendar                  │
+│  - Event appears instantly with 30-min popup reminder       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-- **Implementation Details**:
-  - Update `BookingSection.tsx` to call `syncAppointmentToGoogleCalendar(appointment, getCachedCalendarToken(), settings.calendar_reminder_min || 30, settings.ceo_google_email)` on submit.
-  - Update `src/lib/googleCalendar.ts` to ensure `syncAppointmentToGoogleCalendar` correctly uses `settings.ceo_google_email` and handles API authentication cleanly.
+- **Implementation Steps**:
+  1. Verify OAuth token management in `src/lib/googleCalendar.ts`.
+  2. Ensure `handleBookingSubmit` in `BookingSection.tsx` calls `syncAppointmentToGoogleCalendar` with the active OAuth token.
+  3. Verify Firestore and backend sync in `server.ts`.

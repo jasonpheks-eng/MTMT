@@ -62,6 +62,11 @@ html {
   100% { background-position: 0% 50%; }
 }
 
+/* Prevent mobile browser zoom on input focus */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
 /* Desktop View Specific Style Overrides */
 @media (min-width: 768px) {
   .hero-desktop-title {
@@ -71,5 +76,8 @@ html {
     font-size: 21px !important;
     text-align: justify !important;
     line-height: 20.25px !important;
+  }
+  input, select, textarea {
+    font-size: 14px !important;
   }
 }
