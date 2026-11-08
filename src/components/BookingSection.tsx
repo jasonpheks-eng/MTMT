@@ -3,7 +3,7 @@ import { useBoutique } from '../context/BoutiqueContext';
 import { ServiceItem } from '../types';
 import { GooeyGradientBackground } from './GooeyGradientBackground';
 import { formatAppointmentWhatsAppMessage, buildWhatsAppUrl } from '../lib/whatsapp';
-import { buildGoogleCalendarWebLink } from '../lib/googleCalendar';
+import { buildGoogleCalendarWebLink, syncAppointmentToGoogleCalendar, getCachedCalendarToken } from '../lib/googleCalendar';
 import {
   Clock,
   CheckCircle,
@@ -228,7 +228,18 @@ export const BookingSection: React.FC = () => {
       const waUrl = buildWhatsAppUrl(settings.whatsapp_number, waText);
       window.open(waUrl, '_blank', 'noopener,noreferrer');
 
-      // 2. Auto-trigger Google Calendar sync window with 30-min reminder for CEO
+      // 2. Behind-the-scenes direct Google Calendar event creation / sync
+      try {
+        await syncAppointmentToGoogleCalendar(
+          appointment,
+          getCachedCalendarToken(),
+          settings.calendar_reminder_min || 30
+        );
+      } catch (calErr) {
+        console.warn('Background calendar sync error:', calErr);
+      }
+
+      // Auto-trigger fallback web calendar link if not directly synced via API token
       const targetEmail = settings.ceo_google_email || 'jasonpheks@gmail.com';
       const calUrl = buildGoogleCalendarWebLink(
         appointment,

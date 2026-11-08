@@ -1,69 +1,45 @@
-# Gmail & Google Calendar Sync for jasonpheks@gmail.com
+# Direct Background Google Calendar Event Sync Upon Guest Booking
 
-Configure direct Google Calendar event synchronization pre-targeted to the CEO's Gmail address (`jasonpheks@gmail.com`) so every client booking automatically includes calendar invite parameters for `jasonpheks@gmail.com`.
+Automatically create a calendar event in the CEO's synchronized Google Calendar (`settings.ceo_google_email` / authorized account) behind the scenes whenever a guest clicks "Request via WhatsApp", ensuring the event is created directly via the Google Calendar REST API using the stored access token while opening WhatsApp.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> **Confirmed Target Account**: Sync calendar events directly to `jasonpheks@gmail.com` as the primary CEO destination email address for all boutique appointments.
+> **Confirmed Workflow**: When a guest submits a booking request, the app will execute two actions in parallel behind the scenes:
+> 1. Open WhatsApp with the prefilled message for staff.
+> 2. Dispatch a direct background API call to the CEO's Google Calendar using the authorized OAuth token (`getCachedCalendarToken()`) and target email (`settings.ceo_google_email`), creating the appointment event instantly in the CEO's calendar.
 
-- **Confirmed Choice**: Pre-configure `ceo_google_email` default to `jasonpheks@gmail.com`.
-- **Confirmed Feature**: Automatically append `jasonpheks@gmail.com` as an invited attendee on generated Google Calendar links and backend calendar sync payloads.
+- **Confirmed Decision 1**: Direct REST API event creation (`https://www.googleapis.com/calendar/v3/calendars/primary/events`) utilizing the cached OAuth token if available.
+- **Confirmed Decision 2**: Fallback to direct calendar web link generation with pre-populated attendee (`settings.ceo_google_email`) if no OAuth token is active yet.
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **What It Does**: Whenever a client books an appointment (or when an admin manages bookings), the app generates Google Calendar event invitations with `add=jasonpheks@gmail.com` pre-attached.
-- **Target Audience**: CEO (`jasonpheks@gmail.com`) and boutique clients.
-- **Key Value**: Guarantees appointments instantly appear on the CEO's Google Calendar and Gmail calendar schedule with zero configuration friction.
+- **What It Does**: Seamless background event syncing. When a guest submits a booking in `BookingSection.tsx`, `createAppointment` invokes `syncAppointmentToGoogleCalendar(appointment, getCachedCalendarToken(), settings.calendar_reminder_min || 30)`.
+- **Target Audience**: Boutique CEO / Owner and guests.
+- **Key Value**: Zero-touch calendar entry creation in the CEO's Google Calendar upon guest request submission.
 
 ---
 
-## 2. User Experience & Visual Design
-
-- **Admin Panel (TabCalendar)**:
-  - CEO Google Email pre-set to `jasonpheks@gmail.com`.
-  - Display "Sync Active for jasonpheks@gmail.com" status badge.
-  - Quick action to dispatch test appointment to `jasonpheks@gmail.com` Google Calendar.
-- **Client Booking Modal & Admin Appointments Tab**:
-  - Direct "Sync to Google Calendar" button on every appointment card that invites `jasonpheks@gmail.com` directly.
-
----
-
-## 3. Key Product Decisions & Trade-Offs
-
-- **Decision 1**: Attendee-Targeted Web Links (`add=jasonpheks@gmail.com`)
-  - *Chosen Approach*: Embed `add=jasonpheks@gmail.com` into Google Calendar `TEMPLATE` render links (`https://calendar.google.com/calendar/render?action=TEMPLATE&add=jasonpheks@gmail.com&...`).
-  - *Why*: Automatically sends a Google Calendar invitation directly to `jasonpheks@gmail.com`'s Google Calendar when clicked.
-
----
-
-## 4. Technical Architecture & Data Strategy
+## 2. Technical Architecture & Data Strategy
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                       Client Booking                        │
-│  - Form submission -> Appends add=jasonpheks@gmail.com      │
+│                    Guest Booking Submit                     │
+│  - User enters name & notes, clicks "Request via WhatsApp"   │
 └──────────────────────────────┬──────────────────────────────┘
                                │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 Google Calendar Event Link                  │
-│  - https://calendar.google.com/calendar/render             │
-│    ?action=TEMPLATE                                         │
-│    &text=MT+Mansion:+Service                                │
-│    &add=jasonpheks@gmail.com                                │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 CEO Gmail / Google Calendar                 │
-│  - Event added directly to jasonpheks@gmail.com's Calendar  │
-└─────────────────────────────────────────────────────────────┘
+       ┌───────────────────────┴───────────────────────┐
+       ▼                                               ▼
+┌──────────────────────────────┐        ┌──────────────────────────────┐
+│      Open WhatsApp Chat      │        │  Background Calendar Sync    │
+│  - Prefilled WhatsApp msg    │        │  - syncAppointmentToGoogle...│
+│  - Sends details to staff    │        │  - POST to Google Calendar   │
+│                              │        │    REST API (primary/events) │
+└──────────────────────────────┘        └──────────────────────────────┘
 ```
 
-- **Data Model Updates**:
-  - Set default `defaultSettings.ceo_google_email` in `server.ts` and `initialData.ts` to `jasonpheks@gmail.com`.
-- **Helper Function Updates**:
-  - Update `buildGoogleCalendarWebLink` in `src/lib/googleCalendar.ts` to include `add=${encodeURIComponent(targetEmail)}`.
+- **Implementation Details**:
+  - Update `BookingSection.tsx` to call `syncAppointmentToGoogleCalendar(appointment, getCachedCalendarToken(), settings.calendar_reminder_min || 30, settings.ceo_google_email)` on submit.
+  - Update `src/lib/googleCalendar.ts` to ensure `syncAppointmentToGoogleCalendar` correctly uses `settings.ceo_google_email` and handles API authentication cleanly.
