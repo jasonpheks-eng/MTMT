@@ -25,9 +25,12 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Data Directory
 const isVercel = Boolean(process.env.VERCEL);
+const repoStorePath = path.resolve(process.cwd(), 'data', 'boutique_store.json');
 const dataDir = isVercel ? path.resolve('/tmp', 'data') : path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+  } catch (e) {}
 }
 const storeFilePath = path.join(dataDir, 'boutique_store.json');
 
@@ -213,8 +216,15 @@ let store: BoutiqueStore = {
 
 // Load saved data if present
 try {
+  let fileToLoad = '';
   if (fs.existsSync(storeFilePath)) {
-    const raw = fs.readFileSync(storeFilePath, 'utf-8');
+    fileToLoad = storeFilePath;
+  } else if (fs.existsSync(repoStorePath)) {
+    fileToLoad = repoStorePath;
+  }
+
+  if (fileToLoad) {
+    const raw = fs.readFileSync(fileToLoad, 'utf-8');
     const parsed = JSON.parse(raw);
     store = {
       settings: { ...defaultSettings, ...(parsed.settings || {}) },
@@ -223,6 +233,7 @@ try {
       calendarSlots: parsed.calendarSlots?.length ? parsed.calendarSlots : defaultCalendarSlots,
       appointments: parsed.appointments || defaultAppointments,
     };
+    console.log(`Loaded store from: ${fileToLoad}`);
   }
 } catch (err) {
   console.error('Error reading store file, using defaults:', err);
@@ -232,7 +243,14 @@ const persistStore = () => {
   try {
     fs.writeFileSync(storeFilePath, JSON.stringify(store, null, 2), 'utf-8');
   } catch (err) {
-    console.error('Error persisting store:', err);
+    console.warn('Error persisting store to storeFilePath:', err);
+  }
+  if (!isVercel) {
+    try {
+      if (fs.existsSync(path.dirname(repoStorePath))) {
+        fs.writeFileSync(repoStorePath, JSON.stringify(store, null, 2), 'utf-8');
+      }
+    } catch (e) {}
   }
 };
 
@@ -355,8 +373,10 @@ server.on('upgrade', (request, socket, head) => {
   }
 });
 
-// API Routes
-app.get('/api/bootstrap', (_req: Request, res: Response) => {
+// API Router supporting both direct /api/* calls and Vercel rewritten /* calls
+const apiRouter = express.Router();
+
+apiRouter.get('/bootstrap', (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: store,
@@ -364,7 +384,7 @@ app.get('/api/bootstrap', (_req: Request, res: Response) => {
   });
 });
 
-app.post('/api/verify-pin', (req: Request, res: Response) => {
+apiRouter.post('/verify-pin', (req: Request, res: Response) => {
   const { pin } = req.body;
   const cleanPin = typeof pin === 'string' ? pin.trim().toUpperCase() : '';
   if (cleanPin === 'MT1234') {
@@ -374,7 +394,7 @@ app.post('/api/verify-pin', (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/appointments', async (req: Request, res: Response) => {
+apiRouter.post('/appointments', async (req: Request, res: Response) => {
   const { client_name, client_phone, client_email, service_id, date, time_slot, notes } = req.body;
 
   if (!client_name || !client_phone || !service_id || !date || !time_slot) {
@@ -419,7 +439,7 @@ app.post('/api/appointments', async (req: Request, res: Response) => {
   res.json({ success: true, appointment: newAppointment });
 });
 
-app.patch('/api/appointments/:id', async (req: Request, res: Response) => {
+apiRouter.patch('/appointments/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const { status, notes, time_slot, date } = req.body;
 
@@ -456,7 +476,7 @@ app.patch('/api/appointments/:id', async (req: Request, res: Response) => {
   res.json({ success: true, appointment: updated });
 });
 
-app.post('/api/settings', (req: Request, res: Response) => {
+apiRouter.post('/settings', (req: Request, res: Response) => {
   const newSettings = req.body;
   store.settings = {
     ...store.settings,
@@ -468,6 +488,26 @@ app.post('/api/settings', (req: Request, res: Response) => {
     initSupabase(store.settings.supabase_url, store.settings.supabase_anon_key);
   }
 
+  // Mirror settings to Supabase
+  if (supabase) {
+    try {
+      const payload = {
+        id: 'current',
+        hero_bg_color: store.settings.hero_bg_color,
+        hero_accent_color: store.settings.hero_accent_color,
+        boutique_name: store.settings.boutique_name,
+        tagline: store.settings.tagline,
+        whatsapp_number: store.settings.whatsapp_number,
+        hero_description: store.settings.hero_description,
+        settings: store.settings,
+        updated_at: new Date().toISOString(),
+      };
+      Promise.resolve(supabase.from('boutique_settings').upsert(payload, { onConflict: 'id' })).catch(() => {});
+    } catch (e) {
+      // Supabase mirror error ignored
+    }
+  }
+
   broadcast({
     type: 'SETTINGS_UPDATED',
     data: store.settings,
@@ -477,7 +517,7 @@ app.post('/api/settings', (req: Request, res: Response) => {
   res.json({ success: true, settings: store.settings });
 });
 
-app.post('/api/image-slots', (req: Request, res: Response) => {
+apiRouter.post('/image-slots', (req: Request, res: Response) => {
   const newImageSlots = req.body;
   store.imageSlots = {
     ...store.imageSlots,
@@ -494,11 +534,31 @@ app.post('/api/image-slots', (req: Request, res: Response) => {
   res.json({ success: true, imageSlots: store.imageSlots });
 });
 
-app.post('/api/services', (req: Request, res: Response) => {
+apiRouter.post('/services', (req: Request, res: Response) => {
   const { services } = req.body;
   if (Array.isArray(services)) {
     store.services = services;
     persistStore();
+
+    // Mirror services to Supabase
+    if (supabase) {
+      try {
+        const rows = services.map((s: any, idx: number) => ({
+          id: s.id,
+          category: s.category,
+          number: s.number || String(idx + 1).padStart(2, '0'),
+          title: s.title,
+          description: s.description || '',
+          price: Number(s.price) || 0,
+          duration_min: Number(s.duration_min) || 60,
+          is_active: s.is_active !== false,
+          updated_at: new Date().toISOString(),
+        }));
+        Promise.resolve(supabase.from('services').upsert(rows, { onConflict: 'id' })).catch(() => {});
+      } catch (e) {
+        // Supabase mirror error ignored
+      }
+    }
 
     broadcast({
       type: 'SERVICES_UPDATED',
@@ -512,7 +572,7 @@ app.post('/api/services', (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/slots', (req: Request, res: Response) => {
+apiRouter.post('/slots', (req: Request, res: Response) => {
   const { slots } = req.body;
   if (Array.isArray(slots)) {
     store.calendarSlots = slots;
@@ -530,8 +590,20 @@ app.post('/api/slots', (req: Request, res: Response) => {
   }
 });
 
+apiRouter.post('/sync-store', (req: Request, res: Response) => {
+  const clientStore = req.body;
+  if (clientStore && typeof clientStore === 'object') {
+    if (clientStore.settings) store.settings = { ...store.settings, ...clientStore.settings };
+    if (clientStore.imageSlots) store.imageSlots = { ...store.imageSlots, ...clientStore.imageSlots };
+    if (Array.isArray(clientStore.services)) store.services = clientStore.services;
+    if (Array.isArray(clientStore.calendarSlots)) store.calendarSlots = clientStore.calendarSlots;
+    persistStore();
+  }
+  res.json({ success: true, store });
+});
+
 // Test Supabase connection endpoint
-app.post('/api/test-supabase', async (req: Request, res: Response) => {
+apiRouter.post('/test-supabase', async (req: Request, res: Response) => {
   const { url, key } = req.body;
   if (!url || !key) {
     return res.status(400).json({ success: false, message: 'URL and Anon key required' });
@@ -564,7 +636,7 @@ app.post('/api/test-supabase', async (req: Request, res: Response) => {
 });
 
 // SSE endpoint for fallback real-time streaming
-app.get('/api/realtime-sse', (req: Request, res: Response) => {
+apiRouter.get('/realtime-sse', (req: Request, res: Response) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -577,6 +649,10 @@ app.get('/api/realtime-sse', (req: Request, res: Response) => {
     sseListeners.delete(res);
   });
 });
+
+// Mount on both /api (standard) and / (Vercel rewrite fallback)
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 // Vite Middleware integration in Dev / Static Serving in Prod
 async function startServer() {

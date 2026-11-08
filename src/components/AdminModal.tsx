@@ -31,6 +31,8 @@ import {
   Type,
   Eye,
   EyeOff,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -40,6 +42,7 @@ import { processImageFile, removeImageBackground } from '../lib/imageUpload';
 import { getImageStyleAndClasses } from '../lib/imageStyle';
 import { ExperienceGalleryEditor } from './ExperienceGallery';
 import { authenticateCEOForCalendar, syncAppointmentToGoogleCalendar, getCachedCalendarToken, signOutFromCalendar } from '../lib/googleCalendar';
+import { SUPABASE_SETUP_SQL, SupabaseHealthStatus, SupabaseSyncResult } from '../lib/supabaseSync';
 
 export const AdminModal: React.FC = () => {
   const {
@@ -58,6 +61,9 @@ export const AdminModal: React.FC = () => {
     updateServices,
     calendarSlots,
     updateCalendarSlots,
+    syncSettingsWithSupabase,
+    syncServicesWithSupabase,
+    checkSupabaseStatus,
     testSupabase,
     isSupabaseActive,
     isConnected,
@@ -90,6 +96,11 @@ export const AdminModal: React.FC = () => {
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [supabaseTestResult, setSupabaseTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSavingServices, setIsSavingServices] = useState(false);
+  const [isSyncingAllSupabase, setIsSyncingAllSupabase] = useState(false);
+  const [supabaseHealth, setSupabaseHealth] = useState<SupabaseHealthStatus | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   // Google Calendar Auth State for CEO
   const [isConnectingCalendar, setIsConnectingCalendar] = useState(false);
@@ -164,11 +175,29 @@ export const AdminModal: React.FC = () => {
 
   const handleSaveSettings = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    setIsSavingSettings(true);
     try {
-      await updateSettings(settingsForm);
-      showSuccessNotice('Boutique & WhatsApp settings updated across all live sessions!');
-    } catch {
-      alert('Failed to update settings');
+      const syncResult = await updateSettings(settingsForm);
+      if (syncResult && !syncResult.success) {
+        if (syncResult.code === 'RLS_DENIED') {
+          showSuccessNotice('Saved locally! Supabase note: Permission denied (RLS). Go to Supabase tab to copy permissive SQL.');
+        } else if (syncResult.code === 'TABLE_NOT_FOUND') {
+          showSuccessNotice('Saved locally! Supabase note: Table "boutique_settings" not found. Run SQL in Supabase tab.');
+        } else {
+          showSuccessNotice(`Saved locally! Supabase note: ${syncResult.message}`);
+        }
+      } else {
+        showSuccessNotice(
+          isSupabaseActive
+            ? 'Boutique & color settings saved and synced to Supabase database!'
+            : 'Boutique & color settings saved successfully!'
+        );
+      }
+    } catch (err: any) {
+      console.warn('Settings save warning:', err);
+      showSuccessNotice('Settings saved in browser storage!');
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -176,9 +205,10 @@ export const AdminModal: React.FC = () => {
     e?.preventDefault();
     try {
       await updateImageSlots(imageSlotsForm);
-      showSuccessNotice('Image slots updated live!');
-    } catch {
-      alert('Failed to update images');
+      showSuccessNotice('Image slots saved successfully!');
+    } catch (err) {
+      console.warn('Images save warning:', err);
+      showSuccessNotice('Images saved in browser storage!');
     }
   };
 
@@ -484,11 +514,28 @@ export const AdminModal: React.FC = () => {
   };
 
   const handleSaveServices = async () => {
+    setIsSavingServices(true);
     try {
-      await updateServices(servicesList);
-      showSuccessNotice('Service catalog updated across all sessions!');
+      const syncResult = await updateServices(servicesList);
+      if (syncResult && !syncResult.success) {
+        if (syncResult.code === 'RLS_DENIED') {
+          showSuccessNotice('Services saved locally! Supabase note: Permission denied (RLS). Go to Supabase tab to copy permissive SQL.');
+        } else if (syncResult.code === 'TABLE_NOT_FOUND') {
+          showSuccessNotice('Services saved locally! Supabase note: Table "services" not found. Run SQL in Supabase tab.');
+        } else {
+          showSuccessNotice(`Services saved locally! Supabase note: ${syncResult.message}`);
+        }
+      } else {
+        showSuccessNotice(
+          isSupabaseActive
+            ? `Service catalog (${servicesList.length} offerings) synced to Supabase database!`
+            : 'Service catalog updated across all sessions!'
+        );
+      }
     } catch {
       alert('Failed to update services');
+    } finally {
+      setIsSavingServices(false);
     }
   };
 
@@ -1183,6 +1230,25 @@ export const AdminModal: React.FC = () => {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  {/* Submit Bar */}
+                  <div className="pt-4 flex items-center justify-between gap-3 border-t border-white/10">
+                    <div className="text-[11px] text-white/60">
+                      {isSupabaseActive ? 'Boutique details sync to Supabase database (persists on Vercel).' : 'Changes save locally and broadcast live.'}
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isSavingSettings}
+                      className="px-6 py-2.5 rounded-xl bg-[#C45266] hover:bg-[#b04356] text-white text-xs font-semibold flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingSettings ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isSavingSettings ? 'Saving to Database...' : 'Save Boutique Details'}</span>
+                    </button>
                   </div>
                 </form>
               )}
@@ -2496,6 +2562,24 @@ export const AdminModal: React.FC = () => {
 
                   </div>
 
+                  {/* Submit Bar for Colors & Hero */}
+                  <div className="pt-4 flex items-center justify-between gap-3 border-t border-white/10 sticky bottom-0 bg-[#2D1B28]/95 p-4 -mx-2 rounded-2xl backdrop-blur-md shadow-lg border border-white/10">
+                    <div className="text-[11px] text-white/60">
+                      {isSupabaseActive ? 'Theme colors sync to Supabase database (persists on Vercel).' : 'Theme colors save locally and apply live.'}
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isSavingSettings}
+                      className="px-6 py-2.5 rounded-xl bg-[#C45266] hover:bg-[#b04356] text-white text-xs font-semibold flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingSettings ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isSavingSettings ? 'Saving Colors to Database...' : 'Save Theme & Colors to Database'}</span>
+                    </button>
+                  </div>
                 </form>
               )}
 
@@ -2561,6 +2645,20 @@ export const AdminModal: React.FC = () => {
                         Edit prices, treatment names, and categories. Add new offerings or remove old ones. Changes sync live across the entire boutique and booking form.
                       </p>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveServices}
+                      disabled={isSavingServices}
+                      className="px-5 py-2.5 rounded-xl bg-[#C45266] hover:bg-[#b04356] text-white text-xs font-semibold flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50 shrink-0 self-start sm:self-auto"
+                    >
+                      {isSavingServices ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isSavingServices ? 'Saving to Database...' : 'Save Services to Database'}</span>
+                    </button>
                   </div>
 
                   {/* Add New Treatment Form */}
@@ -2698,6 +2796,7 @@ export const AdminModal: React.FC = () => {
                                 updated[index].title = e.target.value;
                                 setServicesList(updated);
                               }}
+                              onBlur={() => updateServices(servicesList)}
                               className="w-full bg-white/5 border border-white/20 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium"
                             />
                           </div>
@@ -2712,6 +2811,7 @@ export const AdminModal: React.FC = () => {
                                 const updated = [...servicesList];
                                 updated[index].category = e.target.value as any;
                                 setServicesList(updated);
+                                updateServices(updated);
                               }}
                               className="w-full bg-white/5 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white"
                             >
@@ -2735,6 +2835,7 @@ export const AdminModal: React.FC = () => {
                                   updated[index].price = Number(e.target.value);
                                   setServicesList(updated);
                                 }}
+                                onBlur={() => updateServices(servicesList)}
                                 className="w-full bg-white/5 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
                               />
                             </div>
@@ -2752,6 +2853,7 @@ export const AdminModal: React.FC = () => {
                                 updated[index].duration_min = Number(e.target.value);
                                 setServicesList(updated);
                               }}
+                              onBlur={() => updateServices(servicesList)}
                               className="w-full bg-white/5 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
                             />
                           </div>
@@ -2759,13 +2861,13 @@ export const AdminModal: React.FC = () => {
                           <div className="sm:col-span-1 flex justify-end items-end pt-3 sm:pt-0">
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={async () => {
                                 const updated = servicesList.filter((_, i) => i !== index);
                                 setServicesList(updated);
-                                updateServices(updated);
+                                await updateServices(updated);
                                 showSuccessNotice(`Deleted "${srv.title}"`);
                               }}
-                              className="p-2 text-rose-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors"
+                              className="p-2 text-rose-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
                               title="Delete Treatment"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -2783,6 +2885,7 @@ export const AdminModal: React.FC = () => {
                               updated[index].description = e.target.value;
                               setServicesList(updated);
                             }}
+                            onBlur={() => updateServices(servicesList)}
                             placeholder="Treatment description..."
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-rose-100/80 placeholder-white/20 focus:outline-none focus:border-white/50/50"
                           />
@@ -2791,6 +2894,25 @@ export const AdminModal: React.FC = () => {
                     ))}
                   </div>
 
+                  {/* Sticky Bottom Save Bar for Services */}
+                  <div className="pt-4 flex items-center justify-between gap-3 border-t border-white/10 sticky bottom-0 bg-[#2D1B28]/95 p-4 -mx-2 rounded-2xl backdrop-blur-md shadow-lg border border-white/10">
+                    <div className="text-[11px] text-white/60">
+                      {isSupabaseActive ? 'Service offerings sync to Supabase database (persists on Vercel).' : 'Service offerings save locally and apply live.'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSaveServices}
+                      disabled={isSavingServices}
+                      className="px-6 py-2.5 rounded-xl bg-[#C45266] hover:bg-[#b04356] text-white text-xs font-semibold flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingServices ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isSavingServices ? 'Saving Services to Database...' : 'Save All Services to Database'}</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -3134,6 +3256,62 @@ export const AdminModal: React.FC = () => {
                     </div>
                   )}
 
+                  {supabaseHealth && (
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                      <div className="flex items-center justify-between text-xs font-semibold text-white/90 uppercase tracking-wider">
+                        <span>Database Tables & Permissions</span>
+                        <span className="font-mono text-[11px] text-white/60">
+                          {supabaseHealth.connected ? 'Connected' : 'Disconnected'}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/10 flex items-center justify-between">
+                          <span className="font-mono text-white/70">boutique_settings</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                            supabaseHealth.settingsTable === 'ready' 
+                              ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/30'
+                              : supabaseHealth.settingsTable === 'permission_denied'
+                              ? 'bg-amber-900/60 text-amber-300 border border-amber-500/30'
+                              : 'bg-red-900/60 text-red-300 border border-red-500/30'
+                          }`}>
+                            {supabaseHealth.settingsTable === 'ready' ? 'Ready' : supabaseHealth.settingsTable === 'permission_denied' ? 'RLS Blocked' : 'Missing Table'}
+                          </span>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/10 flex items-center justify-between">
+                          <span className="font-mono text-white/70">services</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                            supabaseHealth.servicesTable === 'ready' 
+                              ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/30'
+                              : supabaseHealth.servicesTable === 'permission_denied'
+                              ? 'bg-amber-900/60 text-amber-300 border border-amber-500/30'
+                              : 'bg-red-900/60 text-red-300 border border-red-500/30'
+                          }`}>
+                            {supabaseHealth.servicesTable === 'ready' ? 'Ready' : supabaseHealth.servicesTable === 'permission_denied' ? 'RLS Blocked' : 'Missing Table'}
+                          </span>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/10 flex items-center justify-between">
+                          <span className="font-mono text-white/70">appointments</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                            supabaseHealth.appointmentsTable === 'ready' 
+                              ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/30'
+                              : supabaseHealth.appointmentsTable === 'permission_denied'
+                              ? 'bg-amber-900/60 text-amber-300 border border-amber-500/30'
+                              : 'bg-red-900/60 text-red-300 border border-red-500/30'
+                          }`}>
+                            {supabaseHealth.appointmentsTable === 'ready' ? 'Ready' : supabaseHealth.appointmentsTable === 'permission_denied' ? 'RLS Blocked' : 'Missing Table'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-white/60">
+                        {supabaseHealth.message}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-3">
                     <button
                       type="button"
@@ -3143,13 +3321,116 @@ export const AdminModal: React.FC = () => {
                         setSupabaseTestResult(null);
                         const res = await testSupabase(settingsForm.supabase_url, settingsForm.supabase_anon_key);
                         setSupabaseTestResult(res);
+                        const health = await checkSupabaseStatus();
+                        setSupabaseHealth(health);
                         setIsTestingSupabase(false);
                       }}
-                      className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors flex items-center gap-2"
+                      className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${isTestingSupabase ? 'animate-spin' : ''}`} />
-                      <span>Test Supabase Connection</span>
+                      <span>Test & Verify Tables</span>
                     </button>
+
+                    <button
+                      type="button"
+                      disabled={isSyncingAllSupabase}
+                      onClick={async () => {
+                        setIsSyncingAllSupabase(true);
+                        const sRes = await syncSettingsWithSupabase(settingsForm);
+                        const srvRes = await syncServicesWithSupabase(servicesList);
+                        const health = await checkSupabaseStatus();
+                        setSupabaseHealth(health);
+                        setIsSyncingAllSupabase(false);
+
+                        if (sRes.success && srvRes.success) {
+                          showSuccessNotice('All boutique settings and services successfully synced to Supabase database!');
+                        } else {
+                          const errs = [];
+                          if (!sRes.success) errs.push(`Settings: ${sRes.message}`);
+                          if (!srvRes.success) errs.push(`Services: ${srvRes.message}`);
+                          showSuccessNotice(`Sync note: ${errs.join(' | ')}`);
+                        }
+                      }}
+                      className="px-5 py-2 rounded-xl bg-[#C45266] hover:bg-[#b04356] text-white text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                    >
+                      {isSyncingAllSupabase ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Database className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isSyncingAllSupabase ? 'Syncing to Supabase...' : 'Sync All Data to Supabase Now'}</span>
+                    </button>
+                  </div>
+
+                  {/* SQL Setup Script & Database Permissions Instructions */}
+                  <div className="p-5 rounded-2xl bg-black/40 border border-white/15 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+                      <div>
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-white flex items-center gap-1.5">
+                          <Database className="w-4 h-4 text-emerald-400" />
+                          <span>1-Click Database Setup SQL (Required for Vercel Persistence)</span>
+                        </h4>
+                        <p className="text-[11px] text-white/60 mt-0.5">
+                          Run this SQL script in your Supabase SQL Editor to create tables and configure public Row Level Security (RLS) policies.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(SUPABASE_SETUP_SQL);
+                            setCopiedSql(true);
+                            showSuccessNotice('Setup SQL copied to clipboard!');
+                            setTimeout(() => setCopiedSql(false), 3000);
+                          }}
+                          className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center gap-1.5 transition-all shadow cursor-pointer"
+                        >
+                          {copiedSql ? (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copy SQL Script</span>
+                            </>
+                          )}
+                        </button>
+
+                        <a
+                          href="https://supabase.com/dashboard"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium flex items-center gap-1.5 transition-all"
+                        >
+                          <span>Supabase Dashboard</span>
+                          <ExternalLink className="w-3 h-3 text-white/60" />
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-xs text-white/70">
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-white/10 text-white flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">1</span>
+                        <span>Open your Supabase project dashboard and click <strong>SQL Editor</strong> on the left sidebar.</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-white/10 text-white flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">2</span>
+                        <span>Click <strong>New query</strong>, paste the copied SQL script, and click <strong>Run</strong>.</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-white/10 text-white flex items-center justify-center font-mono text-[10px] shrink-0 mt-0.5">3</span>
+                        <span>Return here and click <strong>"Test & Verify Tables"</strong> to verify all tables show <span className="text-emerald-300 font-mono">Ready</span>!</span>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <pre className="p-3 bg-black/60 rounded-xl border border-white/10 text-[11px] font-mono text-white/80 max-h-44 overflow-y-auto overflow-x-auto leading-relaxed select-all">
+                        {SUPABASE_SETUP_SQL}
+                      </pre>
+                    </div>
                   </div>
                 </div>
               )}
