@@ -476,6 +476,33 @@ apiRouter.patch('/appointments/:id', async (req: Request, res: Response) => {
   res.json({ success: true, appointment: updated });
 });
 
+apiRouter.delete('/appointments/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const index = store.appointments.findIndex((a) => a.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Appointment not found' });
+  }
+
+  store.appointments.splice(index, 1);
+  persistStore();
+
+  if (supabase) {
+    try {
+      await supabase.from('appointments').delete().eq('id', id);
+    } catch (err) {
+      console.warn('Supabase delete note:', err);
+    }
+  }
+
+  broadcast({
+    type: 'APPOINTMENT_DELETED' as any,
+    data: { id },
+    timestamp: Date.now(),
+  });
+
+  res.json({ success: true, message: 'Appointment deleted' });
+});
+
 apiRouter.post('/settings', (req: Request, res: Response) => {
   const newSettings = req.body;
   store.settings = {

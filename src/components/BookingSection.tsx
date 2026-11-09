@@ -9,6 +9,7 @@ import {
   CheckCircle,
   MessageCircle,
   User,
+  Phone,
   AlertCircle,
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -75,6 +76,8 @@ export const BookingSection: React.FC = () => {
     removeAppointment,
     settings,
     selectedServiceForBooking,
+    openBookingForService,
+    selectionTrigger,
     appointments,
   } = useBoutique();
 
@@ -97,15 +100,19 @@ export const BookingSection: React.FC = () => {
     selectedServiceForBooking?.id || (services && services[0]?.id) || ''
   );
 
-  // Smart useEffect to sync only when a new service is explicitly chosen from context
+  // Robust useEffect to sync whenever a selection is triggered from context
   React.useEffect(() => {
-    if (selectedServiceForBooking && selectedServiceForBooking.id !== selectedServiceId) {
+    if (selectedServiceForBooking) {
       setSelectedServiceId(selectedServiceForBooking.id);
-      if (selectedServiceForBooking.category) {
-        setActiveCategory(selectedServiceForBooking.category as any);
+      setIsTreatmentMenuOpen(false); // Close the menu so the Chosen Treatment card is displayed cleanly!
+      
+      // Auto-scroll to booking section
+      const bookingEl = document.getElementById('booking');
+      if (bookingEl && selectionTrigger > 0) {
+        bookingEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
-  }, [selectedServiceForBooking, selectedServiceId]);
+  }, [selectedServiceForBooking, selectionTrigger]);
 
   const selectedService = useMemo(() => {
     const list = services || [];
@@ -164,6 +171,7 @@ export const BookingSection: React.FC = () => {
 
   // Form Fields
   const [clientName, setClientName] = useState<string>('');
+  const [clientPhone, setClientPhone] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
   // Status State
@@ -199,7 +207,7 @@ export const BookingSection: React.FC = () => {
     try {
       const appointment = await createAppointment({
         client_name: clientName.trim(),
-        client_phone: 'WhatsApp Direct',
+        client_phone: clientPhone.trim() || 'WhatsApp Direct',
         service_id: selectedService.id,
         service_title: selectedService.title,
         category: selectedService.category,
@@ -340,6 +348,7 @@ export const BookingSection: React.FC = () => {
                 onClick={() => {
                   setConfirmedBooking(null);
                   setClientName('');
+                  setClientPhone('');
                   setNotes('');
                 }}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-full border border-white/20 hover:bg-white/10 text-white text-xs transition-colors cursor-pointer"
@@ -486,22 +495,16 @@ export const BookingSection: React.FC = () => {
                       Choose your preferred beauty service
                     </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsTreatmentMenuOpen(!isTreatmentMenuOpen)}
-                    className="h-10 px-4 rounded-full text-white text-xs font-medium transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
-                    style={{ backgroundColor: settings.hero_accent_color || '#C45266' }}
-                  >
-                    <span>{isTreatmentMenuOpen ? 'Hide Menu' : 'Browse Treatments'}</span>
-                    {isTreatmentMenuOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </button>
                 </div>
 
                 {/* Selected Treatment Display Card (Clickable) */}
                 <div
                   onClick={() => setIsTreatmentMenuOpen(!isTreatmentMenuOpen)}
-                  className="p-4 rounded-2xl border border-white/20 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-md"
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-md hover:shadow-xl ${
+                    selectedServiceForBooking?.id === selectedService?.id 
+                    ? 'border-white/40 ring-2 ring-white/10 scale-[1.01]' 
+                    : 'border-white/20'
+                  }`}
                   style={{ backgroundColor: `${settings.hero_accent_color || '#C45266'}22` }}
                   title="Click to view all treatments"
                 >
@@ -541,7 +544,7 @@ export const BookingSection: React.FC = () => {
                         )}
                       </div>
                       {selectedService && selectedService.description && (
-                        <p className="font-sans text-xs text-rose-100/90 mt-2 leading-relaxed whitespace-pre-line border-t border-white/5 pt-1.5">
+                        <p className="font-sans text-xs text-rose-100/90 mt-2 leading-relaxed max-h-16 overflow-y-auto pr-1 border-t border-white/5 pt-1.5">
                           {selectedService.description}
                         </p>
                       )}
@@ -642,7 +645,7 @@ export const BookingSection: React.FC = () => {
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-xs text-rose-100/80 mt-1 font-light leading-relaxed whitespace-pre-line">
+                                  <p className="text-xs text-rose-100/80 mt-1 font-light leading-relaxed max-h-16 overflow-y-auto pr-1">
                                     {service.description || `${service.duration_min} mins treatment`}
                                   </p>
                                 </div>
@@ -715,6 +718,23 @@ export const BookingSection: React.FC = () => {
 
                 <div>
                   <label className="block text-[10px] uppercase tracking-widest text-rose-200 mb-1.5 font-semibold px-1">
+                    WhatsApp Phone Number *
+                  </label>
+                  <div className="relative group">
+                    <Phone className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-rose-400 transition-colors" />
+                    <input
+                      type="tel"
+                      required
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                      placeholder="e.g. +265 888..."
+                      className="w-full min-h-[48px] bg-white text-neutral-900 border border-white/20 rounded-2xl pl-12 pr-4 py-3 text-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-rose-400/50 shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest text-rose-200 mb-1.5 font-semibold px-1">
                     Styling Notes (Optional)
                   </label>
                   <div className="relative group">
@@ -757,6 +777,12 @@ export const BookingSection: React.FC = () => {
                       <div className="flex justify-between items-start gap-4 text-rose-200">
                         <span className="uppercase tracking-widest text-[9px] font-bold opacity-70 shrink-0 mt-0.5">Client</span>
                         <span className="text-white font-medium text-right">{clientName.trim()}</span>
+                      </div>
+                    )}
+                    {clientPhone.trim() && (
+                      <div className="flex justify-between items-start gap-4 text-rose-200">
+                        <span className="uppercase tracking-widest text-[9px] font-bold opacity-70 shrink-0 mt-0.5">Phone</span>
+                        <span className="text-white font-medium text-right">{clientPhone.trim()}</span>
                       </div>
                     )}
                     {notes.trim() && (

@@ -30,6 +30,7 @@ const TabImages = React.lazy(() => import('./admin/tabs/TabImages').then((m) => 
 const TabServices = React.lazy(() => import('./admin/tabs/TabServices').then((m) => ({ default: m.TabServices })));
 const TabSlots = React.lazy(() => import('./admin/tabs/TabSlots').then((m) => ({ default: m.TabSlots })));
 const TabCalendar = React.lazy(() => import('./admin/tabs/TabCalendar').then((m) => ({ default: m.TabCalendar })));
+const TabBookingsCalendar = React.lazy(() => import('./admin/tabs/TabBookingsCalendar').then((m) => ({ default: m.TabBookingsCalendar })));
 const TabSupabase = React.lazy(() => import('./admin/tabs/TabSupabase').then((m) => ({ default: m.TabSupabase })));
 
 export const AdminModal: React.FC = () => {
@@ -66,7 +67,7 @@ export const AdminModal: React.FC = () => {
 
   // Active Admin Tab
   const [activeTab, setActiveTab] = useState<
-    'info' | 'colors' | 'images' | 'services' | 'slots' | 'supabase' | 'calendar'
+    'info' | 'colors' | 'images' | 'services' | 'slots' | 'calendar' | 'bookings' | 'supabase'
   >('info');
 
   // Local state for forms
@@ -418,7 +419,18 @@ export const AdminModal: React.FC = () => {
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
-                <span>Calendar</span>
+                <span>Google Cal</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('bookings')}
+                className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-1.5 shrink-0 min-h-[40px] cursor-pointer ${
+                  activeTab === 'bookings' ? 'bg-[#C45266] text-white shadow-md font-semibold' : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5 text-rose-300" />
+                <span>Bookings Calendar</span>
               </button>
 
               <button
@@ -516,6 +528,19 @@ export const AdminModal: React.FC = () => {
 
               <button
                 type="button"
+                onClick={() => setActiveTab('bookings')}
+                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium tracking-wide transition-all cursor-pointer ${
+                  activeTab === 'bookings'
+                    ? 'bg-[#C45266] text-white shadow-md'
+                    : 'text-zinc-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Calendar className="w-4 h-4 text-rose-300" />
+                <span>Bookings Calendar</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab('supabase')}
                 className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium tracking-wide transition-all cursor-pointer ${
                   activeTab === 'supabase'
@@ -592,6 +617,9 @@ export const AdminModal: React.FC = () => {
                     settingsForm={settingsForm}
                     setSettingsForm={setSettingsForm}
                   />
+                )}
+                {activeTab === 'bookings' && (
+                  <TabBookingsCalendar />
                 )}
                 {activeTab === 'supabase' && (
                   <TabSupabase

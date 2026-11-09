@@ -14,6 +14,7 @@ export const BookingModal: React.FC = () => {
     services,
     settings,
     appointments,
+    selectionTrigger,
   } = useBoutique();
 
   const [activeCategory, setActiveCategory] = useState<'all' | 'nails' | 'lashes' | 'hair'>('all');
@@ -39,8 +40,12 @@ export const BookingModal: React.FC = () => {
   const defaultService = services[0];
 
   const handleSelect = (service: ServiceItem) => {
+    // Force context state update first
     openBookingForService(service);
+    
+    // Then close the modal and scroll
     closeBooking();
+    
     const el = document.getElementById('booking');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -136,7 +141,7 @@ export const BookingModal: React.FC = () => {
                       </span>
                     </div>
                     {service.description && (
-                      <p className="text-xs text-rose-100/70 font-light mt-1.5 leading-relaxed whitespace-pre-line">
+                      <p className="text-xs text-rose-100/70 font-light mt-1.5 leading-relaxed whitespace-pre-line max-h-16 overflow-y-auto pr-1">
                         {service.description}
                       </p>
                     )}

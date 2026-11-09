@@ -129,6 +129,7 @@ export interface RealtimeMessage {
   type:
     | 'APPOINTMENT_CREATED'
     | 'APPOINTMENT_UPDATED'
+    | 'APPOINTMENT_DELETED'
     | 'SETTINGS_UPDATED'
     | 'IMAGES_UPDATED'
     | 'SERVICES_UPDATED'

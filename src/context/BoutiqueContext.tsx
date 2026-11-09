@@ -38,9 +38,10 @@ interface BoutiqueContextType {
   supabaseClient: SupabaseClient | null;
   isAdmin: boolean;
   isAdminModalOpen: boolean;
-  adminInitialTab: 'info' | 'colors' | 'images' | 'services' | 'slots' | 'supabase';
+  adminInitialTab: 'info' | 'colors' | 'images' | 'services' | 'slots' | 'calendar' | 'bookings' | 'supabase';
   isBookingModalOpen: boolean;
   selectedServiceForBooking: ServiceItem | null;
+  selectionTrigger: number; // Timestamp to force sync
   isSearchOpen: boolean;
   isFavoritesOpen: boolean;
   favoriteServiceIds: string[];
@@ -66,7 +67,7 @@ interface BoutiqueContextType {
   syncSettingsWithSupabase: (customSettings?: Partial<BoutiqueSettings>) => Promise<SupabaseSyncResult>;
   syncServicesWithSupabase: (customServices?: ServiceItem[]) => Promise<SupabaseSyncResult>;
   checkSupabaseStatus: () => Promise<SupabaseHealthStatus>;
-  removeAppointment: (id: string) => void;
+  removeAppointment: (id: string) => Promise<void>;
   testSupabase: (url: string, key: string) => Promise<{ success: boolean; message: string }>;
   sendWhatsAppDirect: (customText?: string) => void;
 }
@@ -122,10 +123,11 @@ export const BoutiqueProvider: React.FC<{ children: ReactNode }> = ({ children }
   });
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
   const [adminInitialTab, setAdminInitialTab] = useState<
-    'info' | 'colors' | 'images' | 'services' | 'slots' | 'supabase'
+    'info' | 'colors' | 'images' | 'services' | 'slots' | 'calendar' | 'bookings' | 'supabase'
   >('info');
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
   const [selectedServiceForBooking, setSelectedServiceForBooking] = useState<ServiceItem | null>(null);
+  const [selectionTrigger, setSelectionTrigger] = useState<number>(0);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState<boolean>(false);
   const [favoriteServiceIds, setFavoriteServiceIds] = useState<string[]>(() => {
@@ -465,6 +467,12 @@ export const BoutiqueProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
         break;
 
+      case 'APPOINTMENT_DELETED':
+        if (msg.data && msg.data.id) {
+          setAppointments((prev) => prev.filter((a) => a.id !== msg.data.id));
+        }
+        break;
+
       case 'SETTINGS_UPDATED':
         if (msg.data) setSettings((prev) => ({ ...prev, ...msg.data }));
         break;
@@ -488,13 +496,23 @@ export const BoutiqueProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Actions
   const openBookingForService = (service?: ServiceItem) => {
-    setSelectedServiceForBooking(service || services[0] || null);
-    setIsBookingModalOpen(true);
+    const targetService = service || services[0] || null;
+    setSelectedServiceForBooking(targetService);
+    setSelectionTrigger(Date.now());
+    setIsBookingModalOpen(false);
+
+    setTimeout(() => {
+      const bookingEl = document.getElementById('booking');
+      if (bookingEl) {
+        bookingEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
   };
 
   const closeBooking = () => {
     setIsBookingModalOpen(false);
     setSelectedServiceForBooking(null);
+    setSelectionTrigger(Date.now());
   };
 
   const openAdmin = (initialTab?: unknown) => {
@@ -875,12 +893,26 @@ export const BoutiqueProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
-  const removeAppointment = (id: string) => {
+  const removeAppointment = async (id: string) => {
     setAppointments((prev) => {
       const next = prev.filter((a) => a.id !== id);
       localStorage.setItem('mt_appointments_cache', JSON.stringify(next));
       return next;
     });
+
+    if (supabaseClient) {
+      try {
+        Promise.resolve(supabaseClient.from('appointments').delete().eq('id', id)).catch(() => {});
+      } catch (e) {}
+    }
+
+    try {
+      await fetch(`/api/appointments/${id}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('Server delete note:', err);
+    }
   };
 
   const testSupabase = async (
@@ -924,6 +956,7 @@ export const BoutiqueProvider: React.FC<{ children: ReactNode }> = ({ children }
         adminInitialTab,
         isBookingModalOpen,
         selectedServiceForBooking,
+        selectionTrigger,
         isSearchOpen,
         isFavoritesOpen,
         favoriteServiceIds,
