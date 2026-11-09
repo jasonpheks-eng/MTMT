@@ -297,9 +297,6 @@ export const TabServices: React.FC<TabServicesProps> = ({
                 <label className="block text-[10px] uppercase tracking-wider font-mono text-white/70">
                   Service Information / Description (displays on web page)
                 </label>
-                <span className="text-[10px] text-white/40 font-mono">
-                  {(srv.description || '').length} characters
-                </span>
               </div>
               <textarea
                 rows={3}
