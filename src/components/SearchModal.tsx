@@ -118,7 +118,7 @@ export const SearchModal: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-rose-100/70 font-light truncate">
+                    <p className="text-xs text-rose-100/70 font-light mt-0.5 line-clamp-2 leading-relaxed whitespace-pre-line">
                       {service.description}
                     </p>
                   </div>

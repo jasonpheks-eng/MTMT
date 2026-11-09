@@ -47,7 +47,7 @@ export const ServicesFeature: React.FC = () => {
                               </span>
                             )}
                           </h3>
-                          <p className="text-xs sm:text-sm text-rose-100/90 font-light mt-1.5 max-w-xl leading-relaxed">
+                          <p className="text-xs sm:text-sm text-rose-100/90 font-light mt-1.5 max-w-xl leading-relaxed whitespace-pre-line">
                             {service.description}
                           </p>
                         </div>

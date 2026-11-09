@@ -30,7 +30,7 @@ export const TabServices: React.FC<TabServicesProps> = ({
   const [newDescription, setNewDescription] = useState('');
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-12 sm:pb-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="font-editorial text-2xl sm:text-3xl text-white">Treatments & Services Editor</h3>
@@ -114,18 +114,26 @@ export const TabServices: React.FC<TabServicesProps> = ({
             />
           </div>
 
-          <div className="sm:col-span-12">
-            <label className="block text-[11px] uppercase tracking-wider text-white/60 mb-1">
-              Description
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Brief description of the treatment technique and results..."
-                className="flex-1 bg-white/5 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-white/50"
-              />
+          <div className="sm:col-span-12 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-[11px] uppercase tracking-wider text-white/60">
+                Service Information / Description
+              </label>
+              <span className="text-[10px] text-white/40">Multi-line supported · Displays on boutique web page</span>
+            </div>
+            <textarea
+              rows={3}
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              onFocus={(e) => {
+                setTimeout(() => {
+                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 250);
+              }}
+              placeholder="Enter detailed treatment information (e.g. technique, cuticle prep, high-gloss gel finish, what's included, aftercare tips)..."
+              className="w-full bg-white/5 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-rose-400/50 leading-relaxed resize-y scroll-mt-28 min-h-[76px]"
+            />
+            <div className="flex justify-end pt-1">
               <button
                 type="button"
                 onClick={() => {
@@ -150,7 +158,7 @@ export const TabServices: React.FC<TabServicesProps> = ({
                   setNewDescription('');
                   showSuccessNotice(`Added "${newSrv.title}" to treatments!`);
                 }}
-                className="px-5 py-2 rounded-xl bg-[#C45266] hover:bg-[#b04356] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 shadow-md cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[#C45266] hover:bg-[#b04356] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 shadow-md cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Treatment</span>
@@ -164,7 +172,7 @@ export const TabServices: React.FC<TabServicesProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-white/80 font-medium px-1">
           <span>Current Active Treatments ({servicesList.length})</span>
-          <span className="text-[11px] text-white/60">Edits save and broadcast instantly</span>
+          <span className="text-[11px] text-white/60">Edits save and broadcast live to web page</span>
         </div>
 
         {servicesList.map((srv, index) => (
@@ -190,7 +198,12 @@ export const TabServices: React.FC<TabServicesProps> = ({
                     setServicesList(updated);
                   }}
                   onBlur={() => updateServices(servicesList)}
-                  className="w-full bg-white/5 border border-white/20 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium"
+                  onFocus={(e) => {
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 250);
+                  }}
+                  className="w-full bg-white/5 border border-white/20 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium scroll-mt-28"
                 />
               </div>
 
@@ -229,7 +242,12 @@ export const TabServices: React.FC<TabServicesProps> = ({
                       setServicesList(updated);
                     }}
                     onBlur={() => updateServices(servicesList)}
-                    className="w-full bg-white/5 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
+                    onFocus={(e) => {
+                      setTimeout(() => {
+                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }, 250);
+                    }}
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white font-mono scroll-mt-28"
                   />
                 </div>
               </div>
@@ -247,7 +265,12 @@ export const TabServices: React.FC<TabServicesProps> = ({
                     setServicesList(updated);
                   }}
                   onBlur={() => updateServices(servicesList)}
-                  className="w-full bg-white/5 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white font-mono"
+                  onFocus={(e) => {
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 250);
+                  }}
+                  className="w-full bg-white/5 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white font-mono scroll-mt-28"
                 />
               </div>
 
@@ -268,10 +291,18 @@ export const TabServices: React.FC<TabServicesProps> = ({
               </div>
             </div>
 
-            {/* Description field */}
-            <div className="pt-1">
-              <input
-                type="text"
+            {/* Service Information Box - Multi-line Textarea */}
+            <div className="pt-2 border-t border-white/10 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] uppercase tracking-wider font-mono text-white/70">
+                  Service Information / Description (displays on web page)
+                </label>
+                <span className="text-[10px] text-white/40 font-mono">
+                  {(srv.description || '').length} characters
+                </span>
+              </div>
+              <textarea
+                rows={3}
                 value={srv.description || ''}
                 onChange={(e) => {
                   const updated = [...servicesList];
@@ -279,32 +310,17 @@ export const TabServices: React.FC<TabServicesProps> = ({
                   setServicesList(updated);
                 }}
                 onBlur={() => updateServices(servicesList)}
-                placeholder="Treatment description..."
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-rose-100/80 placeholder-white/20 focus:outline-none focus:border-white/50/50"
+                onFocus={(e) => {
+                  setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 250);
+                }}
+                placeholder="Enter detailed description of treatment technique, prep, results, or advice..."
+                className="w-full bg-white/5 border border-white/15 focus:border-white/40 focus:ring-1 focus:ring-rose-400/50 rounded-xl px-3 py-2 text-xs text-rose-100/90 placeholder-white/25 focus:outline-none leading-relaxed resize-y scroll-mt-28 min-h-[72px]"
               />
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Sticky Bottom Save Bar for Services */}
-      <div className="pt-4 flex items-center justify-between gap-3 border-t border-white/10 sticky bottom-0 bg-[#2D1B28]/95 p-4 -mx-2 rounded-2xl backdrop-blur-md shadow-lg border border-white/10">
-        <div className="text-[11px] text-white/60">
-          {isSupabaseActive ? 'Service offerings sync to Supabase database (persists on Vercel).' : 'Service offerings save locally and apply live.'}
-        </div>
-        <button
-          type="button"
-          onClick={handleSaveServices}
-          disabled={isSavingServices}
-          className="px-6 py-2.5 rounded-xl bg-[#C45266] hover:bg-[#b04356] text-white text-xs font-semibold flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
-        >
-          {isSavingServices ? (
-            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Save className="w-3.5 h-3.5" />
-          )}
-          <span>{isSavingServices ? 'Saving Services to Database...' : 'Save All Services to Database'}</span>
-        </button>
       </div>
     </div>
   );

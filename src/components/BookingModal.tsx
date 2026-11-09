@@ -135,6 +135,11 @@ export const BookingModal: React.FC = () => {
                         {sym} {service.price ? service.price.toLocaleString() : 0}
                       </span>
                     </div>
+                    {service.description && (
+                      <p className="text-xs text-rose-100/70 font-light mt-1.5 leading-relaxed whitespace-pre-line">
+                        {service.description}
+                      </p>
+                    )}
                   </div>
 
                   <button

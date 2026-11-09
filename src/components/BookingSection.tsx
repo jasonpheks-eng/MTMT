@@ -535,21 +535,16 @@ export const BookingSection: React.FC = () => {
                             </span>
                             <span className="opacity-40">·</span>
                             <span className="font-medium">{selectedService.duration_min} mins</span>
-                            {selectedService.description && (
-                              <>
-                                <span className="opacity-40 hidden sm:inline">·</span>
-                                <span 
-                                  className="font-sans text-rose-100/70 truncate max-w-[200px] sm:max-w-xs block sm:inline"
-                                >
-                                  {selectedService.description}
-                                </span>
-                              </>
-                            )}
                           </>
                         ) : (
                           <span>Click to view and select from boutique menu</span>
                         )}
                       </div>
+                      {selectedService && selectedService.description && (
+                        <p className="font-sans text-xs text-rose-100/90 mt-2 leading-relaxed whitespace-pre-line border-t border-white/5 pt-1.5">
+                          {selectedService.description}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -647,7 +642,7 @@ export const BookingSection: React.FC = () => {
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-xs text-rose-100/70 truncate mt-1 font-light">
+                                  <p className="text-xs text-rose-100/80 mt-1 font-light leading-relaxed whitespace-pre-line">
                                     {service.description || `${service.duration_min} mins treatment`}
                                   </p>
                                 </div>

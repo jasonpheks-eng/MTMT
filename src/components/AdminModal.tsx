@@ -221,7 +221,7 @@ export const AdminModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full h-full sm:h-auto max-w-5xl sm:max-h-[92vh] bg-[#2D1B28] text-white rounded-none sm:rounded-3xl border-0 sm:border border-white/20 shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative w-full h-[100dvh] sm:h-auto max-w-5xl sm:max-h-[92vh] bg-[#2D1B28] text-white rounded-none sm:rounded-3xl border-0 sm:border border-white/20 shadow-2xl flex flex-col overflow-hidden">
         
         {/* Top Header */}
         <div className="px-6 py-5 border-b border-white/10 bg-[#251421] flex items-center justify-between gap-4 shrink-0">
@@ -529,7 +529,7 @@ export const AdminModal: React.FC = () => {
             </div>
 
             {/* Main Panel Content with Code-Splitting Suspense */}
-            <div className="flex-1 p-4 sm:p-8 overflow-y-auto">
+            <div className="flex-1 p-4 sm:p-8 overflow-y-auto pb-48 sm:pb-12 scroll-smooth overscroll-contain">
               {saveSuccessMsg && (
                 <div className="mb-6 p-3.5 rounded-2xl bg-emerald-950/70 border border-emerald-500/50 text-emerald-200 text-xs flex items-center gap-2 animate-in fade-in">
                   <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
