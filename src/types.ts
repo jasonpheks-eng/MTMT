@@ -115,6 +115,7 @@ export interface ServiceItem {
   description: string;
   price: number;
   duration_min: number;
+  hide_duration?: boolean;
   is_active: boolean;
   is_popular?: boolean;
 }

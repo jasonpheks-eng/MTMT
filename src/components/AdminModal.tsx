@@ -222,7 +222,10 @@ export const AdminModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full h-[100dvh] sm:h-auto max-w-5xl sm:max-h-[92vh] bg-[#2D1B28] text-white rounded-none sm:rounded-3xl border-0 sm:border border-white/20 shadow-2xl flex flex-col overflow-hidden">
+      <div 
+        className="relative w-full h-[100dvh] sm:h-auto max-w-5xl sm:max-h-[92vh] bg-[#2D1B28] text-white rounded-none sm:rounded-3xl border-0 sm:border border-white/20 shadow-2xl flex flex-col overflow-hidden"
+        style={{ fontFamily: 'Verdana, Geneva, sans-serif' }}
+      >
         
         {/* Top Header */}
         <div className="px-6 py-5 border-b border-white/10 bg-[#251421] flex items-center justify-between gap-4 shrink-0">

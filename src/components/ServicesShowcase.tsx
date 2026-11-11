@@ -88,7 +88,8 @@ export const ServicesShowcase: React.FC = () => {
             return (
               <div
                 key={cat.id}
-                className="group flex flex-col bg-white/[0.06] backdrop-blur-md rounded-3xl p-4 border border-white/15 hover:border-white/30 transition-all duration-300 shadow-xl"
+                className="group flex flex-col backdrop-blur-md rounded-3xl p-4 border border-white/15 hover:border-white/30 transition-all duration-300 shadow-xl"
+                style={{ backgroundColor: 'rgba(91, 8, 36, 0.55)' }}
               >
                 {/* Image Container */}
                 <div 
@@ -164,7 +165,7 @@ export const ServicesShowcase: React.FC = () => {
                   </button>
 
                   {isExpanded && (
-                    <div className="space-y-2.5 pt-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-2.5 pt-1 animate-in fade-in slide-in-from-top-2 duration-300 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/20">
                       {catServices.length === 0 ? (
                         <div className="p-4 rounded-xl bg-black/30 text-center text-xs text-rose-200/60">
                           No treatments currently listed in this category.
@@ -202,7 +203,9 @@ export const ServicesShowcase: React.FC = () => {
                                 <span className="text-sm font-bold text-white">
                                   {settings.currency_symbol || 'MWK'} {service.price ? service.price.toLocaleString() : 0}
                                 </span>
-                                <span className="block text-[10px] text-rose-300 opacity-90">{service.duration_min} mins</span>
+                                {!service.hide_duration && service.duration_min > 0 && (
+                                  <span className="block text-[10px] text-rose-300 opacity-90">{service.duration_min} mins</span>
+                                )}
                               </div>
                               <button
                                 type="button"

@@ -361,7 +361,6 @@ export const TabImages: React.FC<TabImagesProps> = ({
               updateImageSlots({ experience_gallery: newGallery }); 
             }} 
           />
-          <ImageSlotEditor slotKey="services_feature" label="Services Feature Editorial Photo" defaultAspect="4/5" />
         </div>
       </div>
     </form>

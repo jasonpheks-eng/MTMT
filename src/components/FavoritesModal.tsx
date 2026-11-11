@@ -76,10 +76,12 @@ export const FavoritesModal: React.FC = () => {
                     <span className="text-sm font-bold text-white">
                       {sym} {service.price ? service.price.toLocaleString() : 0}
                     </span>
-                    <span className="block text-[10px] text-rose-300/70">
-                      <Clock className="w-2.5 h-2.5 inline mr-0.5" />
-                      {service.duration_min}m
-                    </span>
+                    {!service.hide_duration && service.duration_min > 0 && (
+                      <span className="block text-[10px] text-rose-300/70">
+                        <Clock className="w-2.5 h-2.5 inline mr-0.5" />
+                        {service.duration_min}m
+                      </span>
+                    )}
                   </div>
 
                   <button

@@ -134,8 +134,12 @@ export const BookingModal: React.FC = () => {
                       )}
                     </div>
                     <div className="text-xs text-rose-200/60 mt-0.5 flex items-center gap-2">
-                      <span>{service.duration_min} mins</span>
-                      <span>·</span>
+                      {!service.hide_duration && service.duration_min > 0 && (
+                        <>
+                          <span>{service.duration_min} mins</span>
+                          <span>·</span>
+                        </>
+                      )}
                       <span className="text-white font-medium">
                         {sym} {service.price ? service.price.toLocaleString() : 0}
                       </span>

@@ -356,6 +356,7 @@ export async function fetchServicesFromSupabase(
       duration_min: Number(row.duration_min),
       is_active: row.is_active !== false,
       is_popular: row.is_popular,
+      hide_duration: Boolean(row.hide_duration),
     }));
 
     return { success: true, services: mapped };

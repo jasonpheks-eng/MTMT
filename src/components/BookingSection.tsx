@@ -536,8 +536,12 @@ export const BookingSection: React.FC = () => {
                             >
                               {settings.currency_symbol || 'MWK'} {selectedService.price ? selectedService.price.toLocaleString() : 0}
                             </span>
-                            <span className="opacity-40">·</span>
-                            <span className="font-medium">{selectedService.duration_min} mins</span>
+                            {!selectedService.hide_duration && selectedService.duration_min > 0 && (
+                              <>
+                                <span className="opacity-40">·</span>
+                                <span className="font-medium">{selectedService.duration_min} mins</span>
+                              </>
+                            )}
                           </>
                         ) : (
                           <span>Click to view and select from boutique menu</span>
@@ -646,7 +650,7 @@ export const BookingSection: React.FC = () => {
                                     )}
                                   </div>
                                   <p className="text-xs text-rose-100/80 mt-1 font-light leading-relaxed max-h-16 overflow-y-auto pr-1">
-                                    {service.description || `${service.duration_min} mins treatment`}
+                                    {service.description || (!service.hide_duration && service.duration_min > 0 ? `${service.duration_min} mins treatment` : '')}
                                   </p>
                                 </div>
                               </div>
@@ -654,7 +658,9 @@ export const BookingSection: React.FC = () => {
                               <div className="flex items-center gap-4 shrink-0">
                                 <div className="text-right font-mono">
                                   <span className="text-sm sm:text-base font-bold text-white">{settings.currency_symbol || 'MWK'} {service.price ? service.price.toLocaleString() : 0}</span>
-                                  <span className="block text-[10px] text-rose-200 opacity-80 mt-0.5">{service.duration_min}m</span>
+                                  {!service.hide_duration && service.duration_min > 0 && (
+                                    <span className="block text-[10px] text-rose-200 opacity-80 mt-0.5">{service.duration_min}m</span>
+                                  )}
                                 </div>
                                 <div
                                   className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
